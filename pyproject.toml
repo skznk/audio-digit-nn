@@ -6,13 +6,16 @@ build-backend = "setuptools.build_meta"
 name = "nn-4-audio-digit"
 version = "0.1.0"
 description = "neural net for audio classification"
-readme = "README.md"
 requires-python = ">=3.9"
 
 dependencies = [
     "numpy",
-    "cupy-cuda13x",
+    "cupy-cuda12x",
     "librosa",
     "sounddevice",
     "pydub",
 ]
+
+[tool.setuptools.packages.find] 
+where = ["."]
+exclude = ["all_audio_files*", "wav_audio_files*", "au*", "venv*", ".venv*"]

@@ -1,0 +1,6 @@
+pyproject.toml
+nn_4_audio_digit.egg-info/PKG-INFO
+nn_4_audio_digit.egg-info/SOURCES.txt
+nn_4_audio_digit.egg-info/dependency_links.txt
+nn_4_audio_digit.egg-info/requires.txt
+nn_4_audio_digit.egg-info/top_level.txt
