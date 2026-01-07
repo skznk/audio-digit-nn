@@ -9,17 +9,17 @@ import random
 class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->64->32->10 
 
     def __init__(self):
-        self.layer0_neurons = 60 #amount of input neurons for each layer
-        self.layer1_neurons = 128
-        self.layer2_neurons = 64
+        self.layer0_neurons = 7424 #amount of input neurons for each layer
+        self.layer1_neurons = 512
+        self.layer2_neurons = 256
         self.layer3_neurons = 32
         self.outputs = 10
 
-        self.l0_1_weights = self.initializeWeights(60, 128)
-        self.l1_2_weights = self.initializeWeights(128, 64)
-        self.l2_3_weights = self.initializeWeights(64, 32)
+        self.l0_1_weights = self.initializeWeights(7424, 512)
+        self.l1_2_weights = self.initializeWeights(512, 256)
+        self.l2_3_weights = self.initializeWeights(256, 32)
         self.l3_4_weights = self.initializeWeights(32, 10)
-        self.bias = [ cp.zeros((128, 1), dtype=cp.float32), cp.zeros((64, 1), dtype=cp.float32), cp.zeros((32, 1), dtype=cp.float32), cp.zeros((10, 1), dtype=cp.float32)]
+        self.bias = [ cp.zeros((512, 1), dtype=cp.float32), cp.zeros((256, 1), dtype=cp.float32), cp.zeros((32, 1), dtype=cp.float32), cp.zeros((10, 1), dtype=cp.float32)]
 
 
         self.layer0_inp = 0 #inputs during inference for a label
@@ -46,7 +46,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         else:
             print('no saved weights')
 
-    def inference(self, initial_features, batch_size): #arr should be [weight0_arr, weight1_arr, weight2_arr, weight3_arr]
+    def inference(self, initial_features): #arr should be [weight0_arr, weight1_arr, weight2_arr, weight3_arr]
         
         def softmax(final_layer):
 
@@ -77,9 +77,6 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
 
         if soft.shape[1] == 1:
             return (soft, self.label_guessed(softmax_in=soft))
-        elif soft.shape[1] > batch_size:
-            return (soft, self.label_guessed(softmax_in=soft,val=1))
-
 
         return (soft, 0) #10 dimensional vector 0-9
 
@@ -126,10 +123,10 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
 
         self.bias[0] = self.bias[0] - learning_rate*cp.mean(error_signal_1,axis=1,keepdims=True)
         
-        self.l3_4_weights = self.l3_4_weights - learning_rate*grad_weights_4
-        self.l2_3_weights = self.l2_3_weights - learning_rate*grad_weights_3
-        self.l1_2_weights = self.l1_2_weights - learning_rate*grad_weights_2
-        self.l0_1_weights = self.l0_1_weights - learning_rate*grad_weights_1
+        self.l3_4_weights -=  learning_rate*(grad_weights_4+0.0001*self.l3_4_weights)
+        self.l2_3_weights -=  learning_rate*(grad_weights_3+0.0001*self.l2_3_weights)
+        self.l1_2_weights -=  learning_rate*(grad_weights_2+0.0001*self.l1_2_weights)
+        self.l0_1_weights -=  learning_rate*(grad_weights_1+0.0001*self.l0_1_weights)
 
        
 
@@ -139,29 +136,62 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
 
     def train(self, batch=100, epoch=300, learning_rate=0.001):
         all_batch_matrices = create_batch_matrices(batch)
+        lr = learning_rate
+        prev_val = 0
+        rep_rate = 0
+        correct = 0
+        totaltrain =0
         for i in range(epoch):
             random.shuffle(all_batch_matrices)
             print('Training '+ str((i/epoch)*100)+ '% Complete: Epoch '+ str(i))
+
             for j in range(len(all_batch_matrices)):
-                self.backprop(self.inference(initial_features=all_batch_matrices[j][0],batch_size=batch), all_batch_matrices[j][1], learning_rate)
-            print('Validation is '+str(self.runval(batch)*100) + '% Correct')
+                safe_inference = self.inference(initial_features=all_batch_matrices[j][0])[0]
+                self.backprop(safe_inference, all_batch_matrices[j][1], lr)
+
+                guessedlabs = cp.argmax(safe_inference[0], axis=0)
+                correct += cp.sum(guessedlabs == all_batch_matrices[j][1]).item()
+                totaltrain += all_batch_matrices[j][1].size
+            
+            trainaccuracy = (correct/totaltrain)*100
+            valaccuracy = self.runval()*100
+
+            if valaccuracy-0.7 < prev_val < valaccuracy+0.7: # learning decay
+                rep_rate+=1
+            else: 
+                rep_rate = 0
+            
+            if rep_rate > 10:
+                 lr*=0.4
+                 rep_rate = 0
+            prev_val = valaccuracy
+            print('Training Accuracy is: ' + str(trainaccuracy)+ '% Correct')
+            print('Validation is '+str(valaccuracy) + '% Correct')
+            correct = 0
+            totaltrain = 0
 
         self.saveWeights()
 
-    def runval(self, batch):
+    def extract_labels(self, path=r'C:\Users\sarmi\daudiorec\wav_audio_files\val', saveto='valdata.npz'): #val =1 train =0
+        labs = {"zero":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9}
+        files = get_all_paths(path_to_dir=path)
+        labels = cp.asarray([labs[f.parent.name] for f in files])
+        
+        cp.savez(saveto ,labels=labels)
+            
+
+    def runval(self):
         files = get_all_paths(path_to_dir=r'/common/home/sn887/audio-digit-nn/wav_audio_files/val')
         labels = {"zero":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9}
 
         tlist = [extract_normalized_features(file_path=f) for f in files]
-        labels = [labels[f.parent.name] for f in files]
-        
         x = cp.concatenate(tlist,axis=1)
+        file = cp.load('valdata.npz')
+        reallabels = file["labels"].tolist()
+        guessedlabs = self.inference(initial_features=x)[1]
 
-        guessedlabs = self.inference(initial_features=x,batch_size=batch)[1]
-
-        return sum(x == y for x,y in zip(labels,guessedlabs))/len(labels)
+        return sum(x == y for x,y in zip(reallabels,guessedlabs))/len(reallabels)
     
-
     def saveWeights(self): #saves weights and biases from training
         
         cp.savez('savedfeatures/weights.npz', W1=self.l0_1_weights, W2=self.l1_2_weights, W3=self.l2_3_weights, W4=self.l3_4_weights, b1=self.bias[0], b2=self.bias[1], b3=self.bias[2], b4=self.bias[3])
@@ -180,7 +210,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         self.bias[3] = data["b4"]
 
 
-def collect_and_save_features(filepath='/common/home/sn887/audio-digit-nn/wav_audio_files/train'): #speeds up time of training by just storing the features instead of computing them every single epoch
+def collect_and_save_features(filepath=r'C:\Users\sarmi\daudiorec\wav_audio_files\train'): #speeds up time of training by just storing the features instead of computing them every single epoch
     
     labels = {"zero":'savedfeatures/zero/',"one":'savedfeatures/one/',"two":'savedfeatures/two/',"three":'savedfeatures/three/',"four":'savedfeatures/four/',"five":'savedfeatures/five/',"six":'savedfeatures/six/',"seven":'savedfeatures/seven/',"eight":'savedfeatures/eight/',"nine":'savedfeatures/nine/'}
 
@@ -188,18 +218,18 @@ def collect_and_save_features(filepath='/common/home/sn887/audio-digit-nn/wav_au
     for i in range(len(stuff)):
         cp.savez(labels[stuff[i].parent.name]+stuff[i].stem+'.npz', feature=extract_normalized_features(stuff[i]))
 
-    
-
 def extract_features(file=None, raw=None):
+
             try:
                 if file is not None:
-                    y,sr = librosa.load(file) # sampling rate default to 22050 Hz
-                    fts = feature.mfcc(y=y, sr=sr, hop_length = 176, win_length = 529) # We are calculating the feature for each frame. (frame length - hop length)/frame length is the overlap percentage
-                    deltaf1 = feature.delta(data=fts, order=1) #20 features
-                    deltaf2 = feature.delta(data=fts, order=2) #20 features
-                    final = (fts.mean(axis=1), deltaf1.mean(axis=1), deltaf2.mean(axis=1)) #60 features
-                    tim = np.array([*final[0],  *final[1] , *final[2]]).reshape(-1, 1)
-                    return cp.asarray(tim)
+                    y,sr = librosa.load(file, sr=16000) # sampling rate default to 22050 Hz
+                    y_fixed = librosa.util.fix_length(y,size=sr)
+
+                    feats = feature.melspectrogram(y=y_fixed, sr=sr, hop_length = 160, win_length = 400, n_fft=400, n_mels=64, fmin=20,fmax=8000)
+                    logdb = librosa.power_to_db(feats, ref=np.max)
+                    
+                    return split_feats_into_segments(cp.asarray(logdb))
+
                 else:
                     sr = 22050 
                     fts = feature.mfcc(y=raw, sr=sr, hop_length = 176, win_length = 529) # We are calculating the feature for each frame. (frame length - hop length)/frame length is the overlap percentage
@@ -229,11 +259,42 @@ def extract_normalized_features(file_path=None, live_audio=None):
             
             return x
 
+def split_feats_into_segments(matrix):
+                submatrix1 = matrix[:,0:20]
+                submatrix2 = matrix[:,20:40]
+                submatrix3 = matrix[:,40:60]
+                submatrix4 = matrix[:,60:80]
+                submatrix5 = matrix[:,80:101]
+
+                global_mean = cp.mean(matrix, axis=1, keepdims=True)
+                global_std = cp.std(matrix, axis=1, keepdims=True)
+
+                sm1_std = cp.std(submatrix1, axis=1, keepdims=True)
+                sm2_std = cp.std(submatrix2, axis=1, keepdims=True)
+                sm3_std = cp.std(submatrix3, axis=1, keepdims=True)
+                sm4_std = cp.std(submatrix4, axis=1, keepdims=True)
+                sm5_std = cp.std(submatrix5, axis=1, keepdims=True)
+
+                sm1_mean = cp.mean(submatrix1, axis=1, keepdims=True)
+                sm2_mean = cp.mean(submatrix2, axis=1, keepdims=True)
+                sm3_mean = cp.mean(submatrix3, axis=1, keepdims=True)
+                sm4_mean = cp.mean(submatrix4, axis=1, keepdims=True)
+                sm5_mean = cp.mean(submatrix5, axis=1, keepdims=True)
+
+                percentiles = cp.percentile(matrix, (10,50,90), axis=1)
+                p_10th = percentiles[0][:, None] 
+                p_50th = percentiles[1][:, None] 
+                p_90th = percentiles[2][:, None] 
+
+
+                return (global_mean, (cp.concatenate((global_mean, global_std, sm1_mean, sm1_std, sm2_mean, sm2_std, sm3_mean, sm3_std, sm4_mean, sm4_std, sm5_mean, sm5_std, p_10th, p_50th, p_90th, matrix), axis=0)).reshape(-1,1))
+
+
 
 def normalize_features():
 
         file_names = get_all_paths()
-        cp_matrix = cp.concatenate([extract_features(file=x) for x in file_names], axis=1) #(numfiles,60) matrix
+        cp_matrix = cp.concatenate([extract_features(file=x)[0] for x in file_names], axis=1) #(numfiles,60) matrix
         
         mean =  cp.mean(cp_matrix, axis=1, keepdims=True)       
         stdev = cp.std(cp_matrix, axis=1, keepdims=True) 
@@ -250,7 +311,7 @@ def get_stats():
     print('standard deviation')
     print(stdev)
     
-def get_all_paths(path_to_dir=r'/common/home/sn887/audio-digit-nn/wav_audio_files/train'): #path to all wav audio files in train dir
+def get_all_paths(path_to_dir=r'C:\Users\sarmi\daudiorec\wav_audio_files\train'): #path to all wav audio files in train dir
         
         ap = Path(path_to_dir)
         listof_folders = [Path(x) for x in ap.iterdir()]
@@ -279,7 +340,9 @@ def create_batch_matrices(batchsize): #create batch matrices and labels
 
 if __name__ == "__main__":
     tim_net = Neural_Net()
-    tim_net.train(batch=100,epoch=600)
+    
+    
+    
     
     
 
