@@ -137,7 +137,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         
         return (value>0).astype(cp.float32)
 
-    def train(self, batch=100, epoch=300, learning_rate=0.00001):
+    def train(self, batch=100, epoch=300, learning_rate=0.001):
         all_batch_matrices = create_batch_matrices(batch)
         for i in range(epoch):
             random.shuffle(all_batch_matrices)
@@ -149,7 +149,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         self.saveWeights()
 
     def runval(self, batch):
-        files = get_all_paths(path_to_dir=r'C:\Users\sarmi\daudiorec\wav_audio_files\val')
+        files = get_all_paths(path_to_dir=r'/common/home/sn887/audio-digit-nn/wav_audio_files/val')
         labels = {"zero":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9}
 
         tlist = [extract_normalized_features(file_path=f) for f in files]
@@ -164,7 +164,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
 
     def saveWeights(self): #saves weights and biases from training
         
-        cp.savez('weights.npz', W1=self.l0_1_weights, W2=self.l1_2_weights, W3=self.l2_3_weights, W4=self.l3_4_weights, b1=self.bias[0], b2=self.bias[1], b3=self.bias[2], b4=self.bias[3])
+        cp.savez('savedfeatures/weights.npz', W1=self.l0_1_weights, W2=self.l1_2_weights, W3=self.l2_3_weights, W4=self.l3_4_weights, b1=self.bias[0], b2=self.bias[1], b3=self.bias[2], b4=self.bias[3])
 
     def loadWeights(self):
         data = cp.load('weights.npz')
@@ -179,6 +179,16 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         self.bias[2] = data["b3"]
         self.bias[3] = data["b4"]
 
+
+def collect_and_save_features(filepath='/common/home/sn887/audio-digit-nn/wav_audio_files/train'): #speeds up time of training by just storing the features instead of computing them every single epoch
+    
+    labels = {"zero":'savedfeatures/zero/',"one":'savedfeatures/one/',"two":'savedfeatures/two/',"three":'savedfeatures/three/',"four":'savedfeatures/four/',"five":'savedfeatures/five/',"six":'savedfeatures/six/',"seven":'savedfeatures/seven/',"eight":'savedfeatures/eight/',"nine":'savedfeatures/nine/'}
+
+    stuff = get_all_paths()
+    for i in range(len(stuff)):
+        cp.savez(labels[stuff[i].parent.name]+stuff[i].stem+'.npz', feature=extract_normalized_features(stuff[i]))
+
+    
 
 def extract_features(file=None, raw=None):
             try:
@@ -240,7 +250,7 @@ def get_stats():
     print('standard deviation')
     print(stdev)
     
-def get_all_paths(path_to_dir=r'C:\Users\sarmi\daudiorec\wav_audio_files\train'): #path to all wav audio files in train dir
+def get_all_paths(path_to_dir=r'/common/home/sn887/audio-digit-nn/wav_audio_files/train'): #path to all wav audio files in train dir
         
         ap = Path(path_to_dir)
         listof_folders = [Path(x) for x in ap.iterdir()]
@@ -255,7 +265,7 @@ def create_batch_matrices(batchsize): #create batch matrices and labels
     batches = []
     for j in range(0, len(stuff), batchsize):
         files = stuff[j:j+batchsize]
-        feats = [extract_normalized_features(file_path=f) for f in files]   
+        feats = [cp.load(str(Path('/common/home/sn887/audio-digit-nn/savedfeatures/'+f.parent.name)/Path(f.stem+'.npz')))['feature'] for f in files]   
         labs = [labels[f.parent.name] for f in files]                  
 
         x = cp.concatenate(feats, axis=1)                                  
@@ -265,11 +275,12 @@ def create_batch_matrices(batchsize): #create batch matrices and labels
     return batches
         
 
-
     
 
 if __name__ == "__main__":
     tim_net = Neural_Net()
-    tim_net.train(batch=16,epoch=20)
+    tim_net.train(batch=100,epoch=600)
+    
+    
 
     
