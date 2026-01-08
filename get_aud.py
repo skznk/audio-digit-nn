@@ -5,9 +5,9 @@ import nnaud as n
 
 
 
-def record(duration=3): #send this to nnaud
+def record(duration=1): #send this to nnaud
     
-    myrecording = sd.rec(int(duration * 22050), samplerate=22050, channels=1)
+    myrecording = sd.rec(int(duration * 16000), samplerate=16000, channels=1)
     sd.wait()
     livenet = n.Neural_Net()
     num_to_word(livenet.inference(n.extract_normalized_features(file_path=None, live_audio=myrecording[:, 0].astype("float32", copy=False)))[1][0])
