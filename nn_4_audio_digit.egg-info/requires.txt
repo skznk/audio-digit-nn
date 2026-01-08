@@ -1,5 +1,0 @@
-numpy
-cupy-cuda13x
-librosa
-sounddevice
-pydub

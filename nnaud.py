@@ -26,7 +26,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         self.layer1_inp = 0
         self.layer2_inp = 0
         self.layer3_inp = 0
-        self.check_saved_weights()
+        self.loadWeights()
 
 
     def initializeWeights(self,prev_layer_outputs, layer_inputs): # Uses He initialization for neural networks based on layers being  60->128->64->10
@@ -198,7 +198,7 @@ class Neural_Net(): # 5 layer Neural Network  I'm initializing to this 60->128->
         cp.savez('weights.npz', W1=self.l0_1_weights, W2=self.l1_2_weights, W3=self.l2_3_weights, W4=self.l3_4_weights, b1=self.bias[0], b2=self.bias[1], b3=self.bias[2], b4=self.bias[3])
 
     def loadWeights(self):
-        data = cp.load('weights.npz')
+        data = cp.load(r'C:\Users\sarmi\daudiorec\weights.npz')
 
         self.l0_1_weights = data["W1"]
         self.l1_2_weights = data["W2"]
@@ -232,7 +232,9 @@ def extract_features(file=None, raw=None):
 
                 else:
                     sr = 16000
-                    y_fixed = librosa.util.fix_length(raw,size=sr)
+                    norm_raw = raw/max(0.000001, float(np.max(np.abs(raw))))
+                    ytrim, irsr = librosa.effects.trim(norm_raw,top_db=25)
+                    y_fixed = librosa.util.fix_length(ytrim,size=sr)
 
                     feats = feature.melspectrogram(y=y_fixed, sr=sr, hop_length = 160, win_length = 400, n_fft=400, n_mels=64, fmin=20,fmax=8000)
                     logdb = librosa.power_to_db(feats, ref=np.max)
@@ -245,7 +247,7 @@ def extract_features(file=None, raw=None):
     
 def extract_normalized_features(file_path=None, live_audio=None):
 
-        stats = cp.load("stats.npz")
+        stats = cp.load(r"C:\Users\sarmi\daudiorec\stats.npz")
         mean, stdev = stats["mean"], stats["stdev"]
         if file_path is not None: #for training
             x = extract_features(file_path).astype(cp.float32)     

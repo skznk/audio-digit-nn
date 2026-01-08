@@ -4,13 +4,13 @@ from tkinter import ttk
 import nnaud as n
 
 
+livenet = n.Neural_Net()
 
-def record(duration=1): #send this to nnaud
+def record(duration=2): #send this to nnaud
     
     myrecording = sd.rec(int(duration * 16000), samplerate=16000, channels=1)
     sd.wait()
-    livenet = n.Neural_Net()
-    num_to_word(livenet.inference(n.extract_normalized_features(file_path=None, live_audio=myrecording[:, 0].astype("float32", copy=False)))[1][0])
+    num_to_word(livenet.inference(n.extract_normalized_features(file_path=None, live_audio=myrecording[:, 0].astype("float32", copy=False)))[1])
 
 def num_to_word(number):
     labels = {0:"zero",1:"one",2:"two",3:"three",4:"four",5:"five",6:"six",7:"seven",8:"eight",9:"nine"}
