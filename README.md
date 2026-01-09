@@ -18,4 +18,6 @@ Please press record only once per attempt and wait around 0.5-1 seconds before s
 
 The prediction of the number you said will be displayed on the GUI.
 
+If you need to change the input microphone, the "1" in "sd.default.device = (1, 4)" to your desired microphone input index on the main of get_aud.py. Microphone indexes are printed to the terminal when get_aud.py is ran.
+
 Here is me running the code!
