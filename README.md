@@ -6,7 +6,7 @@ The model recognizes spoken digits from one to nine. When a user speaks a single
 
 The logic of the MLP was taken from my CS 440 notes and the internet. The data used to train the model is from googles speech command dataset on kaggle https://www.kaggle.com/datasets/yashdogra/speech-commands?resource=download. 
 
-I chose digit recognition because it paid homage to the classic digit image recognition problem covered in CS 440 (Fall 2025) in Professor Lirong’s class, while staying within my computational and data gathering limits.
+I chose digit recognition because it paid homage to the classic digit image recognition problem shown in CS 440 (Fall 2025) in Professor Lirong’s class, while staying within my computational and data gathering limits.
 
 Training was done through Rutgers ilab machines using their gpus since my personal computer is throttled at the moment, thank you Rutgers ilab! Trained weights are saved in weights.npz. 
 
@@ -21,3 +21,7 @@ The prediction of the number you said will be displayed on the GUI.
 If you need to change the input microphone, the "1" in "sd.default.device = (1, 4)" to your desired microphone input index on the main of get_aud.py. Microphone indexes are printed to the terminal when get_aud.py is ran.
 
 Here is me running the code!
+https://youtu.be/mvJFuRyheho
+
+
+
